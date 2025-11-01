@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admin Dashboard - Welcome, <span id="adminName"></span>!</h1>
+            <button onclick="logout()" class="btn btn-secondary">Logout</button>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>Mark Attendance</h2>
+                <p>Record your attendance for today</p>
+                <a href="/attendance.html" class="btn btn-primary">Mark Attendance</a>
+            </div>
+
+            <div class="card">
+                <h2>My Report</h2>
+                <p>Download your attendance history</p>
+                <button onclick="downloadMyReport()" class="btn btn-primary">Download Report</button>
+            </div>
+
+            <div class="card admin-only">
+                <h2>All Users Report</h2>
+                <p>Download attendance for all users</p>
+                <button onclick="downloadAllUsersReport()" class="btn btn-primary">Download All Users</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/reports.js"></script>
+    <script>
+        checkAuth();
+        const user = getUserInfo();
+        if (user) {
+            document.getElementById('adminName').textContent = user.name;
+        }
+    </script>
+</body>
+</html>
