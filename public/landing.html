@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management System</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .header-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .admin-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .student-btn {
+            background: #3498db;
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            color: white;
+        }
+
+        .live-time {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .live-date {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .landing-container {
+            text-align: center;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .landing-title {
+            font-size: 48px;
+            color: white;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .landing-subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 50px;
+        }
+
+        .role-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .role-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .role-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .role-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .role-description {
+            font-size: 16px;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+
+        .admin-card {
+            border-top: 4px solid #e74c3c;
+        }
+
+        .student-card {
+            border-top: 4px solid #3498db;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 20px;
+            }
+
+            .header-left {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .header-right {
+                align-items: center;
+            }
+
+            .role-selection {
+                grid-template-columns: 1fr;
+            }
+
+            .landing-title {
+                font-size: 32px;
+            }
+
+            .live-time {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header with buttons and live time -->
+    <div class="header">
+        <div class="header-left">
+            <a href="/admin-login.html" class="header-btn admin-btn">👨‍💼 Admin Login</a>
+            <a href="/student-login.html" class="header-btn student-btn">🎓 Student Login</a>
+        </div>
+        <div class="header-right">
+            <div class="live-time" id="liveTime">00:00:00</div>
+            <div class="live-date" id="liveDate">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="landing-container">
+            <h1 class="landing-title">Web-Based Assiduity Management System
+ </h1>
+            <p class="landing-subtitle">Your all-in-one attendance and leave tracker</p>
+        </div>
+    </div>
+
+    <script>
+        // Update live time
+        function updateTime() {
+            const now = new Date();
+
+            // Format time as HH:MM:SS
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}:${seconds}`;
+
+            // Format date
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            const dateString = now.toLocaleDateString('en-US', options);
+
+            document.getElementById('liveTime').textContent = timeString;
+            document.getElementById('liveDate').textContent = dateString;
+        }
+
+        // Update time immediately and then every second
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>

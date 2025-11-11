@@ -5,12 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .leave-balance-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .leave-balance-section h2 {
+            margin-bottom: 20px;
+            color: white;
+            font-size: 20px;
+        }
+
+        .balance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .balance-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .balance-item h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+            color: white;
+        }
+
+        .balance-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .balance-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+            color: white;
+        }
+
+        .loading-balances {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            opacity: 0.8;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Admin Dashboard - Welcome, <span id="adminName"></span>!</h1>
             <button onclick="logout()" class="btn btn-secondary">Logout</button>
+        </div>
+
+        <div class="leave-balance-section">
+            <h2>Your Leave Balances</h2>
+            <div id="loadingBalances" class="loading-balances">Loading balances...</div>
+            <div id="balanceGrid" class="balance-grid" style="display: none;"></div>
         </div>
 
         <div class="dashboard">
@@ -21,15 +83,47 @@
             </div>
 
             <div class="card">
-                <h2>My Report</h2>
-                <p>Download your attendance history</p>
-                <button onclick="downloadMyReport()" class="btn btn-primary">Download Report</button>
+                <h2>View Records</h2>
+                <p>View your attendance history with filters</p>
+                <a href="/records.html" class="btn btn-primary">View Records</a>
+            </div>
+
+            <div class="card">
+                <h2>My Leaves</h2>
+                <p>Request leave and view your balances</p>
+                <a href="/leaves.html" class="btn btn-primary">Manage Leaves</a>
             </div>
 
             <div class="card admin-only">
-                <h2>All Users Report</h2>
-                <p>Download attendance for all users</p>
-                <button onclick="downloadAllUsersReport()" class="btn btn-primary">Download All Users</button>
+                <h2>Leave Approvals</h2>
+                <p>Approve or reject employee leave requests</p>
+                <a href="/admin-leaves.html" class="btn btn-primary">Manage Leave Requests</a>
+            </div>
+
+            <div class="card admin-only">
+                <h2>Leave Types</h2>
+                <p>Configure leave types and default days</p>
+                <a href="/leave-types.html" class="btn btn-primary">Manage Leave Types</a>
+            </div>
+
+            <div class="card admin-only">
+                <h2>Add Student</h2>
+                <p>Register new students and view all users</p>
+                <a href="/add-student.html" class="btn btn-primary">Add Student</a>
+            </div>
+
+            <div class="card">
+                <h2>My Reports</h2>
+                <p>Download your attendance and leave reports</p>
+                <button onclick="downloadMyReport()" class="btn btn-primary">Attendance Report</button>
+                <button onclick="downloadMyLeaveReport()" class="btn btn-secondary" style="margin-top: 10px;">Leave Report</button>
+            </div>
+
+            <div class="card admin-only">
+                <h2>All Users Reports</h2>
+                <p>Download reports for all employees</p>
+                <button onclick="downloadAllUsersReport()" class="btn btn-primary">All Attendance</button>
+                <button onclick="downloadAllLeavesReport()" class="btn btn-secondary" style="margin-top: 10px;">All Leaves</button>
             </div>
         </div>
     </div>
@@ -42,6 +136,61 @@
         if (user) {
             document.getElementById('adminName').textContent = user.name;
         }
+
+        async function loadLeaveBalances() {
+            try {
+                const response = await fetch('http://localhost:3000/api/leave-balances', {
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch balances');
+                }
+
+                const balances = await response.json();
+                displayBalances(balances);
+
+            } catch (error) {
+                console.error('Error loading balances:', error);
+                document.getElementById('loadingBalances').textContent = 'Unable to load leave balances';
+            }
+        }
+
+        function displayBalances(balances) {
+            const loading = document.getElementById('loadingBalances');
+            const grid = document.getElementById('balanceGrid');
+
+            loading.style.display = 'none';
+
+            const noBalances = balances.length === 0;
+            if (noBalances) {
+                loading.style.display = 'block';
+                loading.textContent = 'No leave balances available';
+                return;
+            }
+
+            balances.forEach(balance => {
+                const item = document.createElement('div');
+                item.className = 'balance-item';
+
+                item.innerHTML = `
+                    <h3>${balance.leaveTypeName}</h3>
+                    <div class="balance-value">${balance.remainingDays}</div>
+                    <div class="balance-label">days remaining</div>
+                    <div class="balance-label" style="margin-top: 8px; opacity: 0.7;">
+                        ${balance.usedDays} used / ${balance.totalDays} total
+                    </div>
+                `;
+
+                grid.appendChild(item);
+            });
+
+            grid.style.display = 'grid';
+        }
+
+        loadLeaveBalances();
     </script>
 </body>
 </html>

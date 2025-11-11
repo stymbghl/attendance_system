@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Types Management</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .container {
+            max-width: 1000px;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        thead th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody td {
+            padding: 12px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Leave Types Management</h1>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="window.location.href='/admin.html'">Back to Admin Dashboard</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Add New Leave Type</h2>
+            <form id="addLeaveTypeForm" onsubmit="addLeaveType(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="typeName">Leave Type Name</label>
+                        <input type="text" id="typeName" class="form-control" required placeholder="e.g., Sick Leave">
+                    </div>
+                    <div class="form-group">
+                        <label for="defaultDays">Default Days</label>
+                        <input type="number" id="defaultDays" class="form-control" required min="1" placeholder="10">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Add Leave Type</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Existing Leave Types</h2>
+            <div id="loading" class="empty-state" style="display: none;">
+                Loading leave types...
+            </div>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                No leave types found.
+            </div>
+            <table id="leaveTypesTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Default Days</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="leaveTypesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function loadLeaveTypes() {
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('emptyState');
+            const table = document.getElementById('leaveTypesTable');
+
+            loading.style.display = 'block';
+            emptyState.style.display = 'none';
+            table.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/leave-types', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch leave types');
+
+                const leaveTypes = await response.json();
+                loading.style.display = 'none';
+
+                const noTypes = leaveTypes.length === 0;
+                if (noTypes) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                displayLeaveTypes(leaveTypes);
+                table.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading leave types:', error);
+                loading.style.display = 'none';
+                emptyState.style.display = 'block';
+            }
+        }
+
+        function displayLeaveTypes(leaveTypes) {
+            const tbody = document.getElementById('leaveTypesBody');
+            tbody.innerHTML = '';
+
+            leaveTypes.forEach(type => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td><strong>${type.name}</strong></td>
+                    <td>${type.defaultDays} days</td>
+                    <td>${formatDateTime(type.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm" onclick="editLeaveType(${type.id}, '${type.name.replace(/'/g, "\\'")}', ${type.defaultDays})">
+                                Edit
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteLeaveType(${type.id}, '${type.name.replace(/'/g, "\\'")}')">
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        async function addLeaveType(event) {
+            event.preventDefault();
+
+            const typeName = document.getElementById('typeName').value;
+            const defaultDays = parseInt(document.getElementById('defaultDays').value);
+
+            try {
+                const response = await fetch('/api/leave-types', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        name: typeName,
+                        defaultDays
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to add leave type');
+                }
+
+                alert('Leave type added successfully!');
+                document.getElementById('addLeaveTypeForm').reset();
+                loadLeaveTypes();
+
+            } catch (error) {
+                console.error('Error adding leave type:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function editLeaveType(id, currentName, currentDays) {
+            const newName = prompt('Enter new name:', currentName);
+            if (!newName || newName === currentName) {
+                // Check if only days need updating
+                const newDays = prompt('Enter new default days:', currentDays);
+                if (!newDays) return;
+
+                await updateLeaveType(id, newName || currentName, parseInt(newDays));
+            } else {
+                const newDays = prompt('Enter new default days:', currentDays);
+                if (!newDays) return;
+
+                await updateLeaveType(id, newName, parseInt(newDays));
+            }
+        }
+
+        async function updateLeaveType(id, name, defaultDays) {
+            try {
+                const response = await fetch(`/api/leave-types/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        defaultDays
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to update leave type');
+                }
+
+                alert('Leave type updated successfully!');
+                loadLeaveTypes();
+
+            } catch (error) {
+                console.error('Error updating leave type:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function deleteLeaveType(id, name) {
+            if (!confirm(`Are you sure you want to delete "${name}"? This will also delete all associated balances.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/leave-types/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to delete leave type');
+                }
+
+                alert('Leave type deleted successfully!');
+                loadLeaveTypes();
+
+            } catch (error) {
+                console.error('Error deleting leave type:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Check authentication and admin privileges
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!localStorage.getItem('token') || !user.isAdmin) {
+            alert('Access denied. Admin privileges required.');
+            window.location.href = '/index.html';
+        } else {
+            loadLeaveTypes();
+        }
+    </script>
+</body>
+</html>

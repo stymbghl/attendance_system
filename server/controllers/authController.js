@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 const { generateToken } = require('../utils/jwt');
+const { initializeUserBalances } = require('./leaveBalancesController');
 
 async function register(req, res) {
     const { name, email, password } = req.body;
@@ -47,6 +48,9 @@ async function register(req, res) {
                 }
             );
         });
+
+        // Initialize leave balances for the new user
+        await initializeUserBalances(result.id);
 
         res.status(201).json({
             message: 'User registered successfully',

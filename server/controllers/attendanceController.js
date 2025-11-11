@@ -91,7 +91,94 @@ async function getMyAttendance(req, res) {
     }
 }
 
+/**
+ * Get attendance records with detailed information including leaves
+ * Supports pagination and filtering
+ */
+async function getAttendanceRecords(req, res) {
+    const userId = req.user.id;
+    const { startDate, endDate, type, page = 1, limit = 20 } = req.query;
+
+    try {
+        // Calculate pagination
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const offset = (pageNum - 1) * limitNum;
+
+        // Build query
+        let query = `
+            SELECT
+                a.id,
+                a.date,
+                a.hasConsent,
+                a.type,
+                a.createdAt,
+                lt.name as leaveTypeName,
+                lr.reason as leaveReason
+            FROM attendance a
+            LEFT JOIN leave_requests lr ON a.leaveRequestId = lr.id
+            LEFT JOIN leave_types lt ON lr.leaveTypeId = lt.id
+            WHERE a.userId = ?
+        `;
+
+        const params = [userId];
+
+        // Add filters
+        if (startDate && endDate) {
+            query += ' AND a.date >= ? AND a.date <= ?';
+            params.push(startDate, endDate);
+        }
+
+        if (type) {
+            query += ' AND a.type = ?';
+            params.push(type);
+        }
+
+        // Get total count
+        const countQuery = query.replace(
+            /SELECT.*FROM/s,
+            'SELECT COUNT(*) as total FROM'
+        );
+
+        const countResult = await new Promise((resolve, reject) => {
+            db.get(countQuery, params, (error, row) => {
+                if (error) reject(error);
+                else resolve(row);
+            });
+        });
+
+        const totalRecords = countResult.total;
+        const totalPages = Math.ceil(totalRecords / limitNum);
+
+        // Add sorting and pagination
+        query += ' ORDER BY a.date DESC LIMIT ? OFFSET ?';
+        params.push(limitNum, offset);
+
+        const records = await new Promise((resolve, reject) => {
+            db.all(query, params, (error, rows) => {
+                if (error) reject(error);
+                else resolve(rows || []);
+            });
+        });
+
+        res.status(200).json({
+            records,
+            pagination: {
+                currentPage: pageNum,
+                totalPages,
+                totalRecords,
+                limit: limitNum
+            }
+        });
+
+    } catch (error) {
+        console.error('Get attendance records error:', error);
+        res.status(500).json({ error: 'Failed to retrieve attendance records' });
+    }
+}
+
 module.exports = {
     markAttendance,
-    getMyAttendance
+    getMyAttendance,
+    getAttendanceRecords
 };

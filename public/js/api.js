@@ -72,5 +72,5 @@ function checkAuth() {
 
 function logout() {
     clearAuthToken();
-    window.location.href = '/index.html';
+    window.location.href = '/';
 }

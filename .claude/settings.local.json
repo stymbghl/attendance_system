@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImlzQWRtaW4iOjAsImlhdCI6MTc2MTgxNTM0OCwiZXhwIjoxNzYxOTAxNzQ4fQ.dFEE2rqYa-Lf3D0eldRqqHqMC4pupoIBja9h4nsecAw\")",
+      "Bash(docker-compose down:*)",
+      "Bash(sqlite3:*)",
+      "Bash(node -e:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

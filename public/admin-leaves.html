@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Management - Admin</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .container {
+            max-width: 1400px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: white;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 16px;
+            color: #555;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #3498db;
+        }
+
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        thead th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody td {
+            padding: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .balance-warning {
+            color: #e74c3c;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Leave Management (Admin)</h1>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="window.location.href='/admin.html'">Back to Admin Dashboard</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pending')">Pending Requests</button>
+            <button class="tab" onclick="switchTab('all')">All Requests</button>
+        </div>
+
+        <div id="pendingTab" class="tab-content active">
+            <div class="section">
+                <h2>Pending Leave Requests</h2>
+                <div id="pendingLoading" class="empty-state" style="display: none;">
+                    Loading pending requests...
+                </div>
+                <div id="pendingEmpty" class="empty-state" style="display: none;">
+                    No pending leave requests.
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="pendingTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Leave Type</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Days</th>
+                                <th>Balance</th>
+                                <th>Reason</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="allTab" class="tab-content">
+            <div class="section">
+                <h2>All Leave Requests</h2>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="statusFilter" class="form-control">
+                            <option value="">All</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button class="btn btn-primary" onclick="loadAllRequests()">Apply Filter</button>
+                    </div>
+                </div>
+
+                <div id="allLoading" class="empty-state" style="display: none;">
+                    Loading requests...
+                </div>
+                <div id="allEmpty" class="empty-state" style="display: none;">
+                    No leave requests found.
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="allTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Leave Type</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Days</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Approved By</th>
+                                <th>Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        function switchTab(tabName) {
+            // Update tab buttons
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.getElementById('pendingTab').classList.remove('active');
+            document.getElementById('allTab').classList.remove('active');
+
+            if (tabName === 'pending') {
+                document.getElementById('pendingTab').classList.add('active');
+                loadPendingRequests();
+            } else {
+                document.getElementById('allTab').classList.add('active');
+                loadAllRequests();
+            }
+        }
+
+        async function loadPendingRequests() {
+            const loading = document.getElementById('pendingLoading');
+            const empty = document.getElementById('pendingEmpty');
+            const table = document.getElementById('pendingTable');
+
+            loading.style.display = 'block';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/leaves/pending', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch pending requests');
+
+                const requests = await response.json();
+                loading.style.display = 'none';
+
+                const noRequests = requests.length === 0;
+                if (noRequests) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                displayPendingRequests(requests);
+                table.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading pending requests:', error);
+                loading.style.display = 'none';
+                empty.style.display = 'block';
+            }
+        }
+
+        function displayPendingRequests(requests) {
+            const tbody = document.getElementById('pendingBody');
+            tbody.innerHTML = '';
+
+            requests.forEach(request => {
+                const row = document.createElement('tr');
+
+                const days = calculateDays(request.startDate, request.endDate);
+                const hasSufficientBalance = request.userRemainingDays >= days;
+
+                row.innerHTML = `
+                    <td>
+                        <div><strong>${request.userName}</strong></div>
+                        <div style="font-size: 12px; color: #888;">${request.userEmail}</div>
+                    </td>
+                    <td>${request.leaveTypeName}</td>
+                    <td>${formatDate(request.startDate)}</td>
+                    <td>${formatDate(request.endDate)}</td>
+                    <td>${days} day${days > 1 ? 's' : ''}</td>
+                    <td>
+                        ${request.userRemainingDays} days
+                        ${!hasSufficientBalance ? '<div class="balance-warning">Insufficient!</div>' : ''}
+                    </td>
+                    <td>${request.reason || '-'}</td>
+                    <td>${formatDateTime(request.createdAt)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-sm" onclick="approveRequest(${request.id})">
+                                Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="rejectRequest(${request.id})">
+                                Reject
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        async function loadAllRequests() {
+            const loading = document.getElementById('allLoading');
+            const empty = document.getElementById('allEmpty');
+            const table = document.getElementById('allTable');
+
+            loading.style.display = 'block';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+
+            const status = document.getElementById('statusFilter').value;
+            const params = status ? `?status=${status}` : '';
+
+            try {
+                const response = await fetch(`/api/leaves/all${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch requests');
+
+                const requests = await response.json();
+                loading.style.display = 'none';
+
+                const noRequests = requests.length === 0;
+                if (noRequests) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                displayAllRequests(requests);
+                table.style.display = 'table';
+
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                loading.style.display = 'none';
+                empty.style.display = 'block';
+            }
+        }
+
+        function displayAllRequests(requests) {
+            const tbody = document.getElementById('allBody');
+            tbody.innerHTML = '';
+
+            requests.forEach(request => {
+                const row = document.createElement('tr');
+
+                const days = calculateDays(request.startDate, request.endDate);
+
+                row.innerHTML = `
+                    <td>
+                        <div><strong>${request.userName}</strong></div>
+                        <div style="font-size: 12px; color: #888;">${request.userEmail}</div>
+                    </td>
+                    <td>${request.leaveTypeName}</td>
+                    <td>${formatDate(request.startDate)}</td>
+                    <td>${formatDate(request.endDate)}</td>
+                    <td>${days} day${days > 1 ? 's' : ''}</td>
+                    <td>${request.reason || '-'}</td>
+                    <td><span class="status-badge status-${request.status}">${request.status.toUpperCase()}</span></td>
+                    <td>${request.approvedByName || '-'}</td>
+                    <td>${formatDateTime(request.createdAt)}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        async function approveRequest(requestId) {
+            if (!confirm('Are you sure you want to approve this leave request?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/leaves/${requestId}/approve`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to approve request');
+                }
+
+                alert('Leave request approved successfully!');
+                loadPendingRequests();
+
+            } catch (error) {
+                console.error('Error approving request:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function rejectRequest(requestId) {
+            if (!confirm('Are you sure you want to reject this leave request?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/leaves/${requestId}/reject`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to reject request');
+                }
+
+                alert('Leave request rejected.');
+                loadPendingRequests();
+
+            } catch (error) {
+                console.error('Error rejecting request:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function calculateDays(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = end - start;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return diffDays;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Check authentication and admin privileges
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!localStorage.getItem('token') || !user.isAdmin) {
+            alert('Access denied. Admin privileges required.');
+            window.location.href = '/index.html';
+        } else {
+            loadPendingRequests();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Records</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .container {
+            max-width: 1200px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .records-table {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background-color: #3498db;
+            color: white;
+        }
+
+        thead th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody td {
+            padding: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-attendance {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge-leave {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            border: 1px solid #3498db;
+            background: white;
+            color: #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #3498db;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination span {
+            color: #555;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Attendance Records</h1>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="window.location.href='/home.html'">Back to Home</button>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <label>Start Date</label>
+                <input type="date" id="startDate" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>End Date</label>
+                <input type="date" id="endDate" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Type</label>
+                <select id="typeFilter" class="form-control">
+                    <option value="">All</option>
+                    <option value="attendance">Attendance</option>
+                    <option value="leave">Leave</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-primary" onclick="applyFilters()">Apply Filters</button>
+                <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <div class="records-table">
+            <div id="loading" class="loading" style="display: none;">
+                Loading records...
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                No records found.
+            </div>
+
+            <table id="recordsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Leave Type</th>
+                        <th>Reason</th>
+                        <th>Submitted At</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody"></tbody>
+            </table>
+
+            <div class="pagination" id="pagination" style="display: none;">
+                <button id="prevBtn" onclick="previousPage()">Previous</button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button id="nextBtn" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        async function loadRecords(page = 1) {
+            showLoading();
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const type = document.getElementById('typeFilter').value;
+
+            const params = new URLSearchParams({
+                page: page,
+                limit: 20
+            });
+
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            if (type) params.append('type', type);
+
+            try {
+                const response = await fetch(`/api/attendance/records?${params}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch records');
+                }
+
+                const data = await response.json();
+                displayRecords(data.records);
+                updatePagination(data.pagination);
+
+            } catch (error) {
+                console.error('Error loading records:', error);
+                showEmptyState();
+                alert('Error loading records');
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('recordsTable').style.display = 'none';
+            document.getElementById('pagination').style.display = 'none';
+        }
+
+        function showEmptyState() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('recordsTable').style.display = 'none';
+            document.getElementById('pagination').style.display = 'none';
+        }
+
+        function displayRecords(records) {
+            document.getElementById('loading').style.display = 'none';
+
+            const noRecords = records.length === 0;
+            if (noRecords) {
+                showEmptyState();
+                return;
+            }
+
+            const tbody = document.getElementById('recordsBody');
+            tbody.innerHTML = '';
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+
+                const formattedDate = formatDate(record.date);
+                const formattedTime = formatDateTime(record.createdAt);
+                const isLeave = record.type === 'leave';
+
+                row.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td><span class="badge badge-${record.type}">${record.type.toUpperCase()}</span></td>
+                    <td>${isLeave ? record.leaveTypeName : '-'}</td>
+                    <td>${isLeave && record.leaveReason ? record.leaveReason : '-'}</td>
+                    <td>${formattedTime}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('recordsTable').style.display = 'table';
+            document.getElementById('pagination').style.display = 'flex';
+        }
+
+        function updatePagination(pagination) {
+            currentPage = pagination.currentPage;
+            totalPages = pagination.totalPages;
+
+            document.getElementById('pageInfo').textContent =
+                `Page ${currentPage} of ${totalPages} (${pagination.totalRecords} records)`;
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                loadRecords(currentPage - 1);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                loadRecords(currentPage + 1);
+            }
+        }
+
+        function applyFilters() {
+            loadRecords(1);
+        }
+
+        function clearFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('typeFilter').value = '';
+            loadRecords(1);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Check authentication
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/index.html';
+        } else {
+            loadRecords(1);
+        }
+    </script>
+</body>
+</html>

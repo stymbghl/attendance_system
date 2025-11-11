@@ -5,5 +5,6 @@ const { authenticateToken } = require('../middleware/auth');
 
 router.post('/', authenticateToken, attendanceController.markAttendance);
 router.get('/', authenticateToken, attendanceController.getMyAttendance);
+router.get('/records', authenticateToken, attendanceController.getAttendanceRecords);
 
 module.exports = router;
